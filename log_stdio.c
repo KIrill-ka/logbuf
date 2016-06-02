@@ -10,6 +10,7 @@
 #include <malloc.h>
 #include "logdest.h"
 #include "logres.h"
+#include "log_stdio.h"
 
 struct _logdest_stdio {
  logdest_t dst;

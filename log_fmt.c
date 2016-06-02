@@ -190,6 +190,8 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
  uint32_t sp = 0;
  const char *stack[FMT_STACK_SIZE];
  char fmtbuf[128];
+ uint32_t field_width;
+ int zero_pad;
  int argn = 1;
 
  if(fmt == NULL)
@@ -214,7 +216,9 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
     continue;
    }
 
+
    if(*fmt == '%') {
+    /* argument numbers and conditionals */
     fmt++;
     switch(*fmt) {
              case '#':
@@ -222,6 +226,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                        argn = 0;
                        while(*fmt >= '0' && *fmt <= '9')
                         argn = argn*10 + (*fmt++ - '0');
+                       if(*fmt == '#') fmt++; /* # used as separator, ignore */
                        break;
              case '(':
                        fmt++;
@@ -233,6 +238,38 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
              case ')': fmt++; continue;
     }
 
+    zero_pad = 0;
+    field_width = 0;
+
+    /* parse format modifiers */
+    while(1) {
+     switch(*fmt) {
+           case 'l': fmt++;
+                     continue; /* this is only for fmt_simple, ignore */
+           case '0': if(field_width == 0) zero_pad = 1;
+           case '1':
+           case '2':
+           case '3':
+           case '4':
+           case '5':
+           case '6':
+           case '7':
+           case '8':
+           case '9': field_width = field_width*10 + *fmt-'0';
+                     if(field_width > 4096) {
+                      sprintf(fmtbuf,"<error: field width > 4096>");
+                      putstr(out_buf, fmtbuf);
+                      field_width = 0;
+                      break;
+                     }
+                     fmt++;
+                     continue;
+           default: break;
+     }
+     break;
+    }
+
+    /* format type characters */
     switch(*fmt) {
            case '%':
                    putstr(out_buf, "%");
@@ -263,14 +300,25 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
            case 'd':
            case 'u':
            case 'x':
+           case 'X':
                    if(logdest_get_arg(buf, len, LOGBUF_T_I32, argn, &v, 0, 0, 0)) {
+                    char fmtstr[] = "%?";
                     i = logbuf_get32(v);
-                    sprintf(fmtbuf, *fmt == 'x'?"%x":(*fmt == 'u'?"%u":"%d"), i);
+                    fmtstr[1] = *fmt;
+                    sprintf(fmtbuf, fmtstr, i);
                    } else if(logdest_get_arg(buf, len, LOGBUF_T_I64, argn, &v, 0, 0, 0)) {
+                    char fmtstr[] = "%ll?";
+                    fmtstr[3] = *fmt;
                     memcpy(&I, v, 8);
-                    sprintf(fmtbuf, *fmt == 'x'?"%llx":(*fmt == 'u'?"%llu":"%lld"), (unsigned long long)I);
+                    sprintf(fmtbuf, fmtstr, (unsigned long long)I);
                    } else {
                     sprintf(fmtbuf, "<error: no numeric arg #%d>", argn);
+                   }
+                   if(field_width) {
+                    uint32_t n;
+                    n = strlen(fmtbuf);
+                    while(n++ < field_width)
+                     putstr(out_buf, zero_pad ? "0" : " ");
                    }
                    putstr(out_buf, fmtbuf);
                    argn++;
@@ -333,7 +381,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
            default:
                    sprintf(fmtbuf, "<error: unknown format char-'%c'>", *fmt);
                    putstr(out_buf, fmtbuf);
-                   if(*fmt == 0) continue;
+                   if(*fmt == 0) continue; /* skip fmt++ */
 
     }
    } else {

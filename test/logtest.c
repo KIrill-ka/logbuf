@@ -24,7 +24,7 @@ main()
 {
  logcounter_t *lc;
  logbuf_t *lb;
- lc = logcounter_init();
+ lc = logcounter_create();
  logcounter_connect(lc, &simple_dest);
  logcounter_set_filter(lc, &simple_dest, 1);
 

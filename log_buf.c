@@ -69,7 +69,7 @@ struct _logcounter {
 static void incr_lost(logcounter_t *lc);
 
 struct _logcounter*
-logcounter_init(void)
+logcounter_create(void)
 {
  logcounter_t *lc;
  
@@ -83,12 +83,14 @@ logcounter_init(void)
 }
 
 void 
-logbuf_fini(logcounter_t *lc)
+logcounter_destroy(logcounter_t *lc)
 {
+ while(lc->lc_handles != NULL) 
+  logcounter_disconnect(lc, lc->lc_handles->lh_dest);
+
  logbuf_mutex_destroy(&lc->lc_lock);
  logbuf_cvar_destroy(&lc->lc_list_cv);
  logbuf_mutex_destroy(&lc->lc_lost_cnt_lock);
- if(lc->lc_handles != NULL) logbuf_assert_hook("logbuf_fini: lc->lc_handles != NULL");
  free(lc);
 }
 
@@ -464,6 +466,7 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
 {
  char c;
  uint8_t n;
+ int long_int;
 
  n = argn != NULL ? *argn : 0;
 
@@ -476,8 +479,33 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
 					   n = 0;
 					   while(*fmt >= '0' && *fmt <= '9')
 						n = n*10 + (*fmt++ - '0');
+                       if(*fmt == '#') fmt++; /* # used as separator, ignore */
 					   break;
   }
+
+  long_int = 0;
+  /* parse format modifiers */
+  while(1) {
+     switch(*fmt) {
+           case 'l': long_int = 1;
+                     fmt++;
+                     continue;
+           case '0':
+           case '1':
+           case '2':
+           case '3':
+           case '4':
+           case '5':
+           case '6':
+           case '7':
+           case '8':
+           case '9': fmt++;
+                     continue;
+           default: break;
+     }
+     break;
+  }
+
 
   switch(*fmt++) {
 	/* 
@@ -487,11 +515,28 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
 		   case 's':    logbuf_string(b, n++, va_arg(ap, const char*));
 						break;
 		   case 'a':
-		   case 'x':
-		   case 'u':
-		   case 'd':    logbuf_int32(b, n++, va_arg(ap, int32_t));
+                        logbuf_int32(b, n++, va_arg(ap, int32_t));
 						break;
-		   case 'n':    n++; break;
+		   case 'x':
+		   case 'X':
+		   case 'u':
+		   case 'd':    if(long_int) logbuf_int64(b, n++, va_arg(ap, int64_t));
+                        logbuf_int32(b, n++, va_arg(ap, int32_t));
+						break;
+           case 'l':    long_int = 1;
+                        break;
+           case '0':
+           case '1':    
+           case '2':    
+           case '3':    
+           case '4':    
+           case '5':    
+           case '6':    
+           case '7':    
+           case '8':    
+           case '9':    break;
+		   case 'n':    n++; 
+                        break;
 		   case '%':    break;
 		   default:     logbuf_assert_hook("logbuf_fmtauto_va: illegal format code: 0x%x", (uint32_t)(uint8_t)*(fmt-1));
   }
