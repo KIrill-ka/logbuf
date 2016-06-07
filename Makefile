@@ -1,5 +1,5 @@
-
-CFLAGS=-fPIC -Iinclude -DLINUX -DLP64 -Wall
+OFLAGS ?= -O2
+CFLAGS=-fPIC -Iinclude -DLINUX -DLP64 -Wall $(OFLAGS)
 
 all: build_dir/liblogstdio.so build_dir/liblogbuf.so
 
