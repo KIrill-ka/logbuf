@@ -140,6 +140,7 @@ logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t id)
   time = 0;
 #endif
   *pos = LOGBUF_T_TIME; pos++;
+  *pos = 0; pos++; /* arg num 0 */
   memcpy(pos, &time, 8); pos+= 8;
  }
  buf->lb_pos = pos;
