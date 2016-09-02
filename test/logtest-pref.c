@@ -35,7 +35,7 @@ struct _my_logdest {
  .dest = {.ld_send = print_message}
 };
 
-static const char *mask2grp(uint32_t mask)
+static const char *mask2grp(uint64_t mask)
 {
  if((mask & MSG_GRP_1) != 0) return "GRP1";
  return "UNKNOWN";
@@ -49,7 +49,7 @@ static int print_message(logdest_t *ld, uint8_t *buf, uint32_t len)
   char *file;
   uint32_t *line;
   uint32_t *midp;
-  uint32_t *grp;
+  uint64_t *grp;
   char time_buf[128];
   time_t t;
 

@@ -32,6 +32,7 @@ logdest_get_arg(uint8_t *buf, uint32_t buflen,
 	/* FIXME: we do assume that there's enough room in buf for an argument */
 		   case  LOGBUF_T_I64:
 		   case  LOGBUF_T_TIME:
+		   case LOGBUF_T_GRP:
 				   if(len) *len = 8;
 				   if(ptr) *ptr = buf;
 				   break;
@@ -42,7 +43,6 @@ logdest_get_arg(uint8_t *buf, uint32_t buflen,
 				   break;
 		   case LOGBUF_T_I32:
 		   case LOGBUF_T_MID:
-		   case LOGBUF_T_GRP:
 		   case LOGBUF_T_RID:
 				   if(len) *len = 4;
 				   if(ptr) *ptr = buf;
@@ -59,9 +59,9 @@ logdest_get_arg(uint8_t *buf, uint32_t buflen,
 
   switch(t) {
 		   case LOGBUF_T_MID:
-		   case LOGBUF_T_GRP:
 		   case LOGBUF_T_RID:
 		   case LOGBUF_T_I32: dlen=4; break;
+		   case LOGBUF_T_GRP:
 		   case LOGBUF_T_I64:
 		   case LOGBUF_T_TIME: dlen=8; break;
 		   case LOGBUF_T_STR:
