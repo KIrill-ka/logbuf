@@ -183,6 +183,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
 {
  void *v;
  char *p;
+ uint8_t *p1;
  const char *ff;
  uint32_t w, l;
  uint32_t i;
@@ -322,6 +323,21 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    }
                    putstr(out_buf, fmtbuf);
                    argn++;
+                   break;
+           case 'e':
+                   if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (void**)&p1, &l, 0, 0)) {
+                    sprintf(fmtbuf, "<error: no data arg #%d>", argn-1);
+                    putstr(out_buf, fmtbuf);
+                    break;
+                   }
+                   if(l != 6) {
+                    sprintf(fmtbuf, "<error: len is not 6 #%d>", argn-1);
+                    putstr(out_buf, fmtbuf);
+                    break;
+                   }
+                   sprintf(fmtbuf, "%02x:%02x:%02x:%02x:%02x:%02x", (unsigned)p1[0], (unsigned)p1[1], (unsigned)p1[2],
+                                   (unsigned)p1[3], (unsigned)p1[4], (unsigned)p1[5]);
+                   putstr(out_buf, fmtbuf);
                    break;
            case 'a':
                    if(logdest_get_arg(buf, len, LOGBUF_T_I32, argn++, &v, 0, 0, 0)) {

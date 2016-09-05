@@ -115,7 +115,7 @@ logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t id)
  *pos = LOGBUF_T_MID; pos++;
  logbuf_put32(id, pos); pos += 4;
  *pos = LOGBUF_T_GRP; pos++;
- logbuf_put64(ev_type, pos); pos += 8;
+ memcpy(pos, &ev_type, 8); pos += 8;
  if(!lc->lc_tstamp_on) {
  } else {
   uint64_t time;
@@ -517,6 +517,9 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
 						break;
 		   case 'a':
                         logbuf_int32(b, n++, va_arg(ap, int32_t));
+						break;
+		   case 'e':
+                        logbuf_data(b, n++, va_arg(ap, uint8_t*), 6);
 						break;
 		   case 'x':
 		   case 'X':
