@@ -20,7 +20,7 @@ logdest_t simple_dest = {
  print_message
 };
 
-main()
+int main()
 {
  logcounter_t *lc;
  logbuf_t *lb;
@@ -34,4 +34,5 @@ main()
   logbuf_int32(lb, 1, 1);
   logbuf_send(lb);
  }
+ return 0;
 }

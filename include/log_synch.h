@@ -9,7 +9,7 @@
 
 #ifndef LOG_SYNCH_H
 #define LOG_SYNCH_H
-#ifdef linux
+#if defined(__linux)
 #include <pthread.h>
 typedef pthread_mutex_t logbuf_mutex_t;
 typedef pthread_cond_t logbuf_cvar_t;

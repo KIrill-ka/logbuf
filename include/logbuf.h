@@ -17,15 +17,18 @@
 
 #define LOGBUF_EV_DEBUG 0x8000000000000000ULL
 
-#define LOGBUF_T_MID 	1
-#define LOGBUF_T_GRP 	3
-#define LOGBUF_T_I32 	16
-#define LOGBUF_T_I64 	17
-#define LOGBUF_T_STR 	18
-#define LOGBUF_T_DATA	19
-#define LOGBUF_T_FMT 	20
-#define LOGBUF_T_TIME	21 
-#define LOGBUF_T_RID 	22
+/* Data types stored in log buffer.
+   Types with LOG_BUF_T < 16 do not allow arg number. */
+#define LOGBUF_T_MID 	1	/* message id */
+#define LOGBUF_T_GRP 	3	/* group aka ev_type */
+
+#define LOGBUF_T_I32 	16  /* signed/unsigned int32, IPv4 */
+#define LOGBUF_T_I64 	17	/* signed/unsigned int64 */
+#define LOGBUF_T_STR 	18  /* c-string */
+#define LOGBUF_T_DATA	19	/* variable length byte array */
+#define LOGBUF_T_FMT 	20	/* format string */
+#define LOGBUF_T_TIME	21	/* timestamp as uint64_t */
+#define LOGBUF_T_RID 	22	/* resource identifier = string from _logres */
 
 #ifdef  __cplusplus
 extern "C" {
@@ -53,7 +56,7 @@ extern void logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_li
 #endif
 
 extern void logbuf_debug(struct _logcounter *lc, const char *fmt, ...);
-extern void logbuf_simple_message(struct _logcounter *lc, uint32_t ev_type, uint32_t id, 
+extern void logbuf_simple_message(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id, 
                 const char *fmt, ...);
 
 extern void (*logbuf_assert_hook)(const char *fmt, ...);

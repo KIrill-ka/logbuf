@@ -19,6 +19,12 @@
 #include "logdest.h"
 #include "logcounter.h"
 
+/*
+ * TODO:
+ *  - remove special types for TIME, FMT, use I64 & STR instead
+ *  - add support for RID
+ *  - use 255 arg for primary fmtstr & timestamp
+ */
 
 /* 
  * Buffer data format:
@@ -95,7 +101,7 @@ logcounter_destroy(logcounter_t *lc)
 }
 
 logbuf_t* 
-logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t id)
+logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id)
 {
  logbuf_t *buf;
  uint8_t *pos;
@@ -113,7 +119,7 @@ logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t id)
  buf->lb_lc = lc;
  pos = buf->lb_buf;
  *pos = LOGBUF_T_MID; pos++;
- logbuf_put32(id, pos); pos += 4;
+ logbuf_put32(msg_id, pos); pos += 4;
  *pos = LOGBUF_T_GRP; pos++;
  memcpy(pos, &ev_type, 8); pos += 8;
  if(!lc->lc_tstamp_on) {
@@ -549,9 +555,9 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
 }
 
 void 
-logbuf_simple_message(logcounter_t *lc, uint32_t ev_type, uint32_t id, const char *fmt, ...)
+logbuf_simple_message(logcounter_t *lc, uint64_t ev_type, uint32_t msg_id, const char *fmt, ...)
 {
- logbuf_t *b = logbuf_get(lc, ev_type, id);
+ logbuf_t *b = logbuf_get(lc, ev_type, msg_id);
  va_list ap;
  uint8_t n = 0;
  if(b != NULL) {

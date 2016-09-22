@@ -9,7 +9,7 @@
 
 #ifndef LOGINTTYPES_H
 #define LOGINTTYPES_H
-#ifdef linux
+#if defined(__linux)
 #include <stdint.h>
 #include <endian.h>
 #endif
