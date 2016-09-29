@@ -531,7 +531,7 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
 		   case 'X':
 		   case 'u':
 		   case 'd':    if(long_int) logbuf_int64(b, n++, va_arg(ap, int64_t));
-                        logbuf_int32(b, n++, va_arg(ap, int32_t));
+                        else logbuf_int32(b, n++, va_arg(ap, int32_t));
 						break;
            case 'l':    long_int = 1;
                         break;
