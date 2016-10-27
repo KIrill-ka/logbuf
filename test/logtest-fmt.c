@@ -15,8 +15,24 @@ main()
  logcounter_connect(lc, dest);
  logcounter_set_filter(lc, dest, 1);
 
- logbuf_simple_message(lc, 1, 1, "hex %x HEX %X 0-fill %04x ' '-fill \"%6X\" u64 %020lx", 0x34, 0xa64, 0xbac, 0x8a, 0xfedcba9876543210ULL);
- logbuf_simple_message(lc, 1, 1, "ether %e ip %a", "\x00\x00\x16\x18\xab\xcd", 0xc0a80102);
+ printf("integer format\n");
+ printf("%s\n", "%x 34 %X A64 %04x 0bac %6X \"    8A\" %020lx 0000fedcba9876543210");
+ logbuf_simple_message(lc, 1, 1, "%%x %x %%X %X %%04x %04x %%6X \"%6X\" %%020lx %020lx", 0x34, 0xa64, 0xbac, 0x8a, 0xfedcba9876543210ULL);
+ printf("address format\n");
+ printf("%s\n", "%e 00:00:16:18:ab:cd %a 192.168.1.2");
+ logbuf_simple_message(lc, 1, 1, "%%e %e %%a %a", "\x00\x00\x16\x18\xab\xcd", 0xc0a80102);
+ {
+    int32_t int_array[] = {1, 2, 3, 4};
+    int32_t int_array1[] = {1, 2, 3, -4};
+ 	printf("arrays\n");
+ 	printf("%s\n", "%,d 1 2 3 4 %,1x a b c %02,1x 0a 0b 0c %+04,1x 0x0a 0x0b 0x0c %02,1x 0f f0 0f ff");
+ 	logbuf_simple_message(lc, 1, 1, "%%,d %,d %%,1x %,1x %%02,1x %02,1x %%+04,1x %+04,1x %%02,1x %02,1x", int_array, sizeof(int_array), 
+                                    "\x0a\x0b\x0c", 3, "\x0a\x0b\x0c", 3, "\x0a\x0b\x0c", 3,
+                                    "\x0f\xf0\x0f\xff", 4);
+
+ 	printf("%s\n", "%,d 1 2 3 -4");
+ 	logbuf_simple_message(lc, 1, 1, "%%,d %,d", int_array1, sizeof(int_array1));
+ }
  /* logcounter_disconnect(lc, dest); */
  logcounter_destroy(lc);
  logdest_stdio_destroy(dest);

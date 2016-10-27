@@ -474,6 +474,7 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
  char c;
  uint8_t n;
  int long_int;
+ int array;
 
  n = argn != NULL ? *argn : 0;
 
@@ -491,12 +492,17 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
   }
 
   long_int = 0;
+  array = 0;
   /* parse format modifiers */
   while(1) {
      switch(*fmt) {
            case 'l': long_int = 1;
                      fmt++;
                      continue;
+           case ',': array = 1;
+                     fmt++;
+                     continue;
+           case '+':
            case '0':
            case '1':
            case '2':
@@ -517,34 +523,23 @@ logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
   switch(*fmt++) {
 	/* 
 	 * %S and conditionals should not be supported,
-	 * %, arrays may be supported.
 	 */
 		   case 's':    logbuf_string(b, n++, va_arg(ap, const char*));
-						break;
-		   case 'a':
-                        logbuf_int32(b, n++, va_arg(ap, int32_t));
 						break;
 		   case 'e':
                         logbuf_data(b, n++, va_arg(ap, uint8_t*), 6);
 						break;
+		   case 'a':
 		   case 'x':
 		   case 'X':
 		   case 'u':
-		   case 'd':    if(long_int) logbuf_int64(b, n++, va_arg(ap, int64_t));
-                        else logbuf_int32(b, n++, va_arg(ap, int32_t));
+		   case 'd':    if(array) {
+                         uint8_t *buf = va_arg(ap, uint8_t*);
+                         uint32_t len = va_arg(ap, uint32_t);
+                         logbuf_data(b, n++, buf, len);
+                        } else if(long_int) logbuf_int64(b, n++, va_arg(ap, int64_t));
+                        else logbuf_int32(b, n++, va_arg(ap, uint32_t));
 						break;
-           case 'l':    long_int = 1;
-                        break;
-           case '0':
-           case '1':    
-           case '2':    
-           case '3':    
-           case '4':    
-           case '5':    
-           case '6':    
-           case '7':    
-           case '8':    
-           case '9':    break;
 		   case 'n':    n++; 
                         break;
 		   case '%':    break;
