@@ -177,6 +177,17 @@ void logdest_format_message(struct _logres *res, const char *fmtstr, uint8_t *bu
  *out = b->buf_start;
 }
 
+static void 
+pad_int(void (*putstr)(void *out_buf, const char *str), void *out_buf,
+        const char *v, uint32_t field_width, int zero_pad) {
+ if(field_width) {
+  uint32_t n;
+  n = strlen(v);
+  while(n++ < field_width)
+   putstr(out_buf, zero_pad ? "0" : " ");
+ }
+}
+
 void
 logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), void *out_buf, struct _logres *res,
                 const char *fmt, uint8_t *buf, uint32_t len)
@@ -193,6 +204,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
  char fmtbuf[128];
  uint32_t field_width;
  int zero_pad;
+ int alt_form;
  int argn = 1;
 
  if(fmt == NULL)
@@ -222,13 +234,6 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
     /* argument numbers and conditionals */
     fmt++;
     switch(*fmt) {
-             case '#':
-                       fmt++;
-                       argn = 0;
-                       while(*fmt >= '0' && *fmt <= '9')
-                        argn = argn*10 + (*fmt++ - '0');
-                       if(*fmt == '#') fmt++; /* # used as separator, ignore */
-                       break;
              case '(':
                        fmt++;
                        while(*fmt >= '0' && *fmt <= '9') argn = argn*10 + (*fmt++ - '0');
@@ -241,12 +246,22 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
 
     zero_pad = 0;
     field_width = 0;
+    alt_form = 0;
 
     /* parse format modifiers */
     while(1) {
      switch(*fmt) {
            case 'l': fmt++;
                      continue; /* this is only for fmt_simple, ignore */
+           case '+': alt_form = 1;
+                     fmt++;
+                     continue; /* this is only for fmt_simple, ignore */
+           case '#': fmt++;
+                     argn = 0;
+                     while(*fmt >= '0' && *fmt <= '9')
+                      argn = argn*10 + (*fmt++ - '0');
+                     if(*fmt == '#') fmt++; /* # used as separator, ignore */
+                     continue;
            case '0': if(field_width == 0) zero_pad = 1;
            case '1':
            case '2':
@@ -299,7 +314,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    }
                    break;
            case 'd':
-           case 'u':
+           case 'u': alt_form = 0;
            case 'x':
            case 'X':
                    if(logdest_get_arg(buf, len, LOGBUF_T_I32, argn, &v, 0, 0, 0)) {
@@ -315,11 +330,12 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    } else {
                     sprintf(fmtbuf, "<error: no numeric arg #%d>", argn);
                    }
-                   if(field_width) {
-                    uint32_t n;
-                    n = strlen(fmtbuf);
-                    while(n++ < field_width)
-                     putstr(out_buf, zero_pad ? "0" : " ");
+                   if(alt_form) { 
+                     if(!zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
+                     putstr(out_buf, "0x");
+                     if(zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
+                   } else {
+                     pad_int(putstr, out_buf, fmtbuf, field_width, zero_pad);
                    }
                    putstr(out_buf, fmtbuf);
                    argn++;
@@ -365,12 +381,22 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
 
                    ff = NULL;
                    switch(*++fmt) {
-                           case 'd': ff = "%s%lld";
-                           case 'x': if(!ff) ff = "%s0x%llx";
-                           case 'u': if(!ff) ff = "%s%llu";
+                           case 'd': ff = "%lld"; /* TODO: use one function for array and non-array */
+                           case 'u': if(!ff) ff = "%llu";
+                                     alt_form = 0;
+                           case 'x': if(!ff) ff = "%llx";
+                           case 'X': if(!ff) ff = "%llX";
                                   for(i = 0; i < l; i+=w) {
-                                    sprintf(fmtbuf, ff, i>0?" ":"", load_int(p+i, w));
-                                    putstr(out_buf, fmtbuf);
+                                   if(i > 0) putstr(out_buf, " ");
+                                   sprintf(fmtbuf, ff, load_int(p+i, w));
+                                   if(alt_form) {
+                                    if(!zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
+                                    putstr(out_buf, "0x");
+                                    if(zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
+                                   } else {
+                                     pad_int(putstr, out_buf, fmtbuf, field_width, zero_pad);
+                                   }
+                                   putstr(out_buf, fmtbuf);
                                   }
                                   break;
                            case 'a':
