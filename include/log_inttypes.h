@@ -37,7 +37,7 @@ static inline void logbuf_put32l(uint32_t x, void *a)
                  addr[0] = (x & 0x000000ff);
 }
 
-static inline uint32_t logbuf_get32b(void *a)
+static inline uint32_t logbuf_get32b(const void *a)
 { 
                  uint8_t *addr = (uint8_t*) a;
 
@@ -47,7 +47,7 @@ static inline uint32_t logbuf_get32b(void *a)
                          + ((uint32_t) addr[0] << 24);
 }
 
-static inline uint32_t logbuf_get32l(void *a)
+static inline uint32_t logbuf_get32l(const void *a)
 { 
                  uint8_t *addr = (uint8_t*) a;
 
@@ -83,11 +83,11 @@ static inline uint32_t logbuf_get32l(void *a)
 * \brief Write 32 bit integer into portentialy unaligned buffer.
 */
 static inline void logbuf_put32(uint32_t x, void *addr) { logbuf_put32l(x, addr); }
-static inline uint32_t logbuf_get32(void *addr) {return logbuf_get32l(addr);}
+static inline uint32_t logbuf_get32(const void *addr) {return logbuf_get32l(addr);}
 
 #else
 static inline void logbuf_put32(uint32_t x, void *addr) { logbuf_put32b(x, addr); }
-static inline uint32_t logbuf_get32(void *addr) {return logbuf_get32b(addr);}
+static inline uint32_t logbuf_get32(const void *addr) {return logbuf_get32b(addr);}
 #endif
 
 #endif

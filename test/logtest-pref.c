@@ -27,7 +27,7 @@ const char * ini_buf =
   logbuf_string((lb), LOG_SRC_FILE_ARG_N, __FILE__); \
   logbuf_int32((lb), LOG_SRC_LINE_ARG_N, __LINE__)
 
-static int print_message(logdest_t *ld, uint8_t *buf, uint32_t len);
+static int print_message(logdest_t *ld, const uint8_t *buf, uint32_t len);
 struct _my_logdest {
   logdest_t dest;
   logres_t *res;
@@ -41,7 +41,7 @@ static const char *mask2grp(uint64_t mask)
  return "UNKNOWN";
 }
 
-static int print_message(logdest_t *ld, uint8_t *buf, uint32_t len)
+static int print_message(logdest_t *ld, const uint8_t *buf, uint32_t len)
 {
   struct _my_logdest *d = (struct _my_logdest*)ld;
   uint64_t *ts_ptr;
