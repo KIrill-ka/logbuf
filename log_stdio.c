@@ -23,7 +23,7 @@ static void print_str(void *b, const char *str)
  fprintf((FILE*)b, "%s", str);
 }
 
-static int print_message(logdest_t *ld, uint8_t *buf, uint32_t len)
+static int print_message(logdest_t *ld, const uint8_t *buf, uint32_t len)
 {
  struct _logdest_stdio *d = (struct _logdest_stdio*) ld;
 

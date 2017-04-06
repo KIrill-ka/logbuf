@@ -53,7 +53,7 @@ fmt_skip(const char **fmt, int *a)
 }
 
 static uint64_t
-load_int(void *d, int w)
+load_int(const void *d, int w)
 {
  int i;
  uint64_t n;
@@ -124,26 +124,26 @@ static void putstrstr(void *out_buf, const char *str)
 }
 
 static const char*
-get_fmtstr(struct _logres *res, uint8_t *buf, uint32_t len)
+get_fmtstr(struct _logres *res, const uint8_t *buf, uint32_t len)
 {
  const char *fmtstr = NULL;
 
  if(res != NULL) {
-  void *mid_ptr;
+  const void *mid_ptr;
   uint32_t mid;
-  logdest_get_arg(buf, len, LOGBUF_T_MID, 0, (void**)&mid_ptr, NULL, NULL, NULL);
+  logdest_get_arg(buf, len, LOGBUF_T_MID, 0, &mid_ptr, NULL, NULL, NULL);
   if(mid_ptr) {
    mid = logbuf_get32(mid_ptr);
    fmtstr = logres_get(res, mid, "FMTSTR", NULL);
   }
  }
  if(fmtstr == NULL)
-  logdest_get_arg(buf, len, LOGBUF_T_FMT, 0, (void**)&fmtstr, NULL, NULL, NULL);
+  logdest_get_arg(buf, len, LOGBUF_T_FMT, 0, (const void**)&fmtstr, NULL, NULL, NULL);
 
  return fmtstr;
 }
 
-void logdest_format_message(struct _logres *res, const char *fmtstr, uint8_t *buf,
+void logdest_format_message(struct _logres *res, const char *fmtstr, const uint8_t *buf,
                 uint32_t len, char **out)
 {
  struct _strbuf *b;
@@ -158,10 +158,10 @@ void logdest_format_message(struct _logres *res, const char *fmtstr, uint8_t *bu
   fmtstr = get_fmtstr(res, buf, len);
 
  if(fmtstr == NULL) {
-  void *mid_ptr;
+  const void *mid_ptr;
   uint32_t mid = 0;
 
-  logdest_get_arg(buf, len, LOGBUF_T_MID, 0, (void**)&mid_ptr, NULL, NULL, NULL);
+  logdest_get_arg(buf, len, LOGBUF_T_MID, 0, &mid_ptr, NULL, NULL, NULL);
   if(mid_ptr) mid = logbuf_get32(mid_ptr);
   else mid = 0;
   sprintf(fmtbuf, "<error: no format string for mid %x>", mid);
@@ -190,11 +190,11 @@ pad_int(void (*putstr)(void *out_buf, const char *str), void *out_buf,
 
 void
 logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), void *out_buf, struct _logres *res,
-                const char *fmt, uint8_t *buf, uint32_t len)
+                const char *fmt, const uint8_t *buf, uint32_t len)
 {
- void *v;
- char *p;
- uint8_t *p1;
+ const void *v;
+ const char *p;
+ const uint8_t *p1;
  const char *ff;
  uint32_t w, l;
  uint32_t i;
@@ -211,10 +211,10 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
   fmt = get_fmtstr(res, buf, len);
 
  if(fmt == NULL) {
-  void *mid_ptr;
+  const void *mid_ptr;
   uint32_t mid = 0;
 
-  logdest_get_arg(buf, len, LOGBUF_T_MID, 0, (void**)&mid_ptr, NULL, NULL, NULL);
+  logdest_get_arg(buf, len, LOGBUF_T_MID, 0, &mid_ptr, NULL, NULL, NULL);
   if(mid_ptr) mid = logbuf_get32(mid_ptr);
   else mid = 0;
   sprintf(fmtbuf, "<error: no format string for mid %x>", mid);
@@ -236,7 +236,11 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
     switch(*fmt) {
              case '(':
                        fmt++;
-                       while(*fmt >= '0' && *fmt <= '9') argn = argn*10 + (*fmt++ - '0');
+                       if(*fmt >= '0' && *fmt <= '9') {
+                        argn = 0;
+                        do argn = argn*10 + (*fmt++ - '0');
+                        while(*fmt >= '0' && *fmt <= '9');
+                       }
                        if(logdest_get_arg(buf, len, fmt_char2type(*fmt), argn, 0, 0, 0, 0)) fmt++;
                        else {fmt_skip(&fmt, &argn); argn++;}
                        continue;
@@ -292,7 +296,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    break;
 
            case 'S':
-                   if(logdest_get_arg(buf, len, LOGBUF_T_FMT, argn++, (void**)&p, 0, 0, 0)) {
+                   if(logdest_get_arg(buf, len, LOGBUF_T_FMT, argn++, (const void**)&p, 0, 0, 0)) {
                     if(sp >= FMT_STACK_SIZE) {
                      putstr(out_buf, "<error: fmt stack overflow>");
                      break;
@@ -306,7 +310,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    break;
 
            case 's':
-                   if(logdest_get_arg(buf, len, LOGBUF_T_STR, argn++, (void**)&p, 0, 0, 0)) {
+                   if(logdest_get_arg(buf, len, LOGBUF_T_STR, argn++, (const void**)&p, 0, 0, 0)) {
                     putstr(out_buf, p);
                    } else {
                     sprintf(fmtbuf,"<error: no string arg #%d>", argn-1);
@@ -341,7 +345,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    argn++;
                    break;
            case 'e':
-                   if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (void**)&p1, &l, 0, 0)) {
+                   if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (const void**)&p1, &l, 0, 0)) {
                     sprintf(fmtbuf, "<error: no data arg #%d>", argn-1);
                     putstr(out_buf, fmtbuf);
                     break;
@@ -367,7 +371,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
            case ',':
                    w = fmt[1] >= '1' && fmt[1] <= '8' ? *++fmt - '0' : 4;
 
-                   if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (void**)&p, &l, 0, 0)) {
+                   if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (const void**)&p, &l, 0, 0)) {
                     sprintf(fmtbuf, "<error: no data arg #%d>", argn-1);
                     putstr(out_buf, fmtbuf);
                     break;

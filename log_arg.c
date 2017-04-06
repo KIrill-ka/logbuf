@@ -12,13 +12,13 @@
 #include "logbuf.h"
 
 int 
-logdest_get_arg(uint8_t *buf, uint32_t buflen, 
-				uint8_t type, uint8_t argn, void** ptr, uint32_t *len, uint8_t *type_out, uint8_t *arg_out) 
+logdest_get_arg(const uint8_t *buf, uint32_t buflen, 
+				uint8_t type, uint8_t argn, const void** ptr, uint32_t *len, uint8_t *type_out, uint8_t *arg_out) 
 {
  uint32_t dlen;
  uint8_t t;
  uint8_t n;
- uint8_t *bufend = buf + buflen;
+ const uint8_t *bufend = buf + buflen;
 
 
  while(buf < bufend) {

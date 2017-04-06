@@ -9,7 +9,7 @@ static void print_str(void *b, const char *str)
  printf("%s", str);
 }
 
-static int print_message(logdest_t *ld, uint8_t *buf, uint32_t len)
+static int print_message(logdest_t *ld, const uint8_t *buf, uint32_t len)
 {
   logdest_format_message_stream(print_str, NULL, NULL, NULL, buf, len);
   printf("\n");
