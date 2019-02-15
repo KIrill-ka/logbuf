@@ -33,6 +33,28 @@ main()
  	printf("%s\n", "%,d 1 2 3 -4");
  	logbuf_simple_message(lc, 1, 1, "%%,d %,d", int_array1, sizeof(int_array1));
  }
+
+ {
+   printf("conditions\n");
+   const char *s = "%(2s%s%|%#1s:%#u%) %s";
+   logbuf_t *lb;
+   lb = logbuf_get(lc, 1, 1);
+   logbuf_fmtstr(lb, s);
+   logbuf_string(lb, 3, "end");
+   logbuf_int64(lb, 1, 255);
+   logbuf_int32(lb, 2, 5);
+   logbuf_string(lb, 1, "sw1");
+   logbuf_send(lb);
+
+   lb = logbuf_get(lc, 1, 1);
+   logbuf_fmtstr(lb, s);
+   logbuf_int64(lb, 1, 255);
+   logbuf_int32(lb, 2, 5);
+   logbuf_string(lb, 1, "sw1");
+   logbuf_string(lb, 2, "port1");
+   logbuf_string(lb, 3, "end");
+   logbuf_send(lb);
+ }
  /* logcounter_disconnect(lc, dest); */
  logcounter_destroy(lc);
  logdest_stdio_destroy(dest);
