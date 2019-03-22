@@ -20,7 +20,7 @@ logdest_get_arg(const uint8_t *buf, uint32_t buflen,
  uint8_t n;
  const uint8_t *bufend = buf + buflen;
 
- while(buf < bufend-1) { /* 2 is the minimum length for tag+value */
+ while(buf+1 < bufend) { /* 2 is the minimum length for tag+value */
   t = *buf++;
   if(t < 16) n = 255;
   else n = *buf++;
