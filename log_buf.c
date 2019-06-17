@@ -101,29 +101,22 @@ logcounter_destroy(logcounter_t *lc)
 }
 
 logbuf_t* 
-logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id)
+logbuf_create(uint64_t ev_type, uint32_t msg_id, int add_timestamp)
 {
  logbuf_t *buf;
  uint8_t *pos;
- if((lc->lc_ev_mask & ev_type) == 0) return NULL;
+
  buf = malloc(sizeof(*buf));
- if(!buf) {
-  logbuf_mutex_enter(&lc->lc_lock);
-  incr_lost(lc);
-  logbuf_mutex_exit(&lc->lc_lock);
-  return 0;
- }
+ if(!buf) return 0;
  buf->lb_ev_type = ev_type;
  buf->lb_ok = 1;
  buf->lb_xbuf = NULL;
- buf->lb_lc = lc;
  pos = buf->lb_buf;
  *pos = LOGBUF_T_MID; pos++;
  logbuf_put32(msg_id, pos); pos += 4;
  *pos = LOGBUF_T_GRP; pos++;
  memcpy(pos, &ev_type, 8); pos += 8;
- if(!lc->lc_tstamp_on) {
- } else {
+ if(add_timestamp) {
   uint64_t time;
 #if defined(WIN32)
   LARGE_INTEGER freq;
@@ -151,6 +144,62 @@ logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id)
  }
  buf->lb_pos = pos;
  buf->lb_left = sizeof(buf->lb_buf) - (pos - buf->lb_buf);
+ return buf;
+}
+
+int 
+logbuf_event_needed(struct _logcounter *lc, uint64_t ev_type)
+{
+ return (lc->lc_ev_mask & ev_type) != 0;
+}
+
+logbuf_t* 
+logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id)
+{
+ logbuf_t *buf;
+ if((lc->lc_ev_mask & ev_type) == 0) return NULL;
+ buf = logbuf_create(ev_type, msg_id, lc->lc_tstamp_on);
+ if(!buf) {
+  logbuf_mutex_enter(&lc->lc_lock);
+  incr_lost(lc);
+  logbuf_mutex_exit(&lc->lc_lock);
+  return NULL;
+ }
+ buf->lb_lc = lc;
+ return buf;
+}
+
+logbuf_t*
+logbuf_regenerate(struct _logcounter *lc, uint8_t *src_buf, uint32_t len)
+{
+ uint64_t ev_type;
+ logbuf_t *buf;
+ uint8_t *b;
+
+ if(len < 1 + 4 + 1 + 8) return NULL; /* not using logdest_get_arg
+                                         to avoid dependency */
+ if(src_buf[1+4] != LOGBUF_T_GRP || src_buf[0] != LOGBUF_T_MID) return NULL;
+ memcpy(&ev_type, src_buf+1+4+1, 8);
+ buf = malloc(sizeof(*buf));
+ if(!buf) return NULL;
+ if(len > sizeof(buf->lb_buf)) {
+  b = malloc(len);
+  if(b == NULL) {
+   free(buf);
+   return NULL;
+  }
+  buf->lb_xbuf = b;
+  buf->lb_left = 0;
+ } else {
+  buf->lb_xbuf = NULL;
+  b = buf->lb_buf;
+  buf->lb_left = sizeof(buf->lb_buf) - len;
+ }
+ memcpy(b, src_buf, len);
+ buf->lb_pos = b+len;
+ buf->lb_ev_type = ev_type;
+ buf->lb_lc = lc;
+ buf->lb_ok = 1;
  return buf;
 }
 
