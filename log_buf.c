@@ -101,22 +101,29 @@ logcounter_destroy(logcounter_t *lc)
 }
 
 logbuf_t* 
-logbuf_create(uint64_t ev_type, uint32_t msg_id, int add_timestamp)
+logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id)
 {
  logbuf_t *buf;
  uint8_t *pos;
-
+ if((lc->lc_ev_mask & ev_type) == 0) return NULL;
  buf = malloc(sizeof(*buf));
- if(!buf) return 0;
+ if(!buf) {
+  logbuf_mutex_enter(&lc->lc_lock);
+  incr_lost(lc);
+  logbuf_mutex_exit(&lc->lc_lock);
+  return 0;
+ }
  buf->lb_ev_type = ev_type;
  buf->lb_ok = 1;
  buf->lb_xbuf = NULL;
+ buf->lb_lc = lc;
  pos = buf->lb_buf;
  *pos = LOGBUF_T_MID; pos++;
  logbuf_put32(msg_id, pos); pos += 4;
  *pos = LOGBUF_T_GRP; pos++;
  memcpy(pos, &ev_type, 8); pos += 8;
- if(add_timestamp) {
+ if(!lc->lc_tstamp_on) {
+ } else {
   uint64_t time;
 #if defined(WIN32)
   LARGE_INTEGER freq;
@@ -151,22 +158,6 @@ int
 logbuf_event_needed(struct _logcounter *lc, uint64_t ev_type)
 {
  return (lc->lc_ev_mask & ev_type) != 0;
-}
-
-logbuf_t* 
-logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t msg_id)
-{
- logbuf_t *buf;
- if((lc->lc_ev_mask & ev_type) == 0) return NULL;
- buf = logbuf_create(ev_type, msg_id, lc->lc_tstamp_on);
- if(!buf) {
-  logbuf_mutex_enter(&lc->lc_lock);
-  incr_lost(lc);
-  logbuf_mutex_exit(&lc->lc_lock);
-  return NULL;
- }
- buf->lb_lc = lc;
- return buf;
 }
 
 logbuf_t*

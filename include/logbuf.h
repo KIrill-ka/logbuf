@@ -39,7 +39,6 @@ typedef struct _logbuf logbuf_t;
 struct _logcounter;
 
 extern int logbuf_event_needed(struct _logcounter *lc, uint64_t ev_type);
-extern logbuf_t* logbuf_create(uint64_t ev_type, uint32_t msg_id, int add_timestamp);
 extern logbuf_t* logbuf_get(struct _logcounter *lc, uint64_t ev_type, uint32_t id);
 extern logbuf_t* logbuf_regenerate(struct _logcounter *lc, uint8_t *src_buf, uint32_t len);
 
