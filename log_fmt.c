@@ -53,7 +53,7 @@ fmt_skip(const char **fmt, int *a)
 }
 
 static uint64_t
-load_int(const void *d, int w)
+load_uint(const void *d, int w)
 {
  int i;
  uint64_t n;
@@ -64,7 +64,16 @@ load_int(const void *d, int w)
 #else
   n = (n<<8) + *((uint8_t*)d+i);
 #endif
-  return n;
+
+ return n;
+}
+
+static int64_t
+load_int(const void *d, int w)
+{
+ int64_t n = load_uint(d, w);
+
+ return n<<(8-w)*8>>(8-w)*8;
 }
 
 struct _strbuf {
@@ -188,6 +197,44 @@ pad_int(void (*putstr)(void *out_buf, const char *str), void *out_buf,
  }
 }
 
+static void 
+put_padded_int(void (*putstr)(void *out_buf, const char *str), void *out_buf,
+                const char *v, uint32_t field_width, int zero_pad, int hex_prefix) {
+ if(hex_prefix) {
+  if(!zero_pad) pad_int(putstr, out_buf, v, field_width >= 2 ? field_width-2 : field_width, zero_pad);
+  putstr(out_buf, "0x");
+  if(zero_pad) pad_int(putstr, out_buf, v, field_width >= 2 ? field_width-2 : field_width, zero_pad);
+ } else {
+  pad_int(putstr, out_buf, v, field_width, zero_pad);
+ }
+ putstr(out_buf, v);
+}
+
+static void
+format_int(char *buf, char fmt, uint32_t data_width, const char *dataptr)
+{
+ const char *ff;
+ uint64_t i;
+ int sign = 0;
+
+ switch(fmt) {
+         case 'd': ff = "%lld";
+                   sign = 1;
+                   break;
+         case 'u': ff = "%llu";
+                   break;
+         case 'x': ff = "%llx";
+                   break;
+         case 'X': ff = "%llX";
+                   break;
+ }
+                                   
+ if(!sign) i = load_uint(dataptr, data_width);
+ else i = load_int(dataptr, data_width);
+
+ sprintf(buf, ff, i);
+}
+
 void
 logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), void *out_buf, struct _logres *res,
                 const char *fmt, const uint8_t *buf, uint32_t len)
@@ -195,10 +242,8 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
  const void *v;
  const char *p;
  const uint8_t *p1;
- const char *ff;
  uint32_t w, l;
  uint32_t i;
- uint64_t I;
  uint32_t sp = 0;
  const char *stack[FMT_STACK_SIZE];
  char fmtbuf[128];
@@ -206,6 +251,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
  int zero_pad;
  int alt_form;
  int argn = 1;
+ char f;
 
  if(fmt == NULL)
   fmt = get_fmtstr(res, buf, len);
@@ -290,7 +336,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
     }
 
     /* format type characters */
-    switch(*fmt) {
+    switch(f = *fmt) {
            case '%':
                    putstr(out_buf, "%");
                    break;
@@ -322,26 +368,16 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
            case 'x':
            case 'X':
                    if(logdest_get_arg(buf, len, LOGBUF_T_I32, argn, &v, 0, 0, 0)) {
-                    char fmtstr[] = "%?";
-                    i = logbuf_get32(v);
-                    fmtstr[1] = *fmt;
-                    sprintf(fmtbuf, fmtstr, i);
+                    format_int(fmtbuf, f, 4, v);
                    } else if(logdest_get_arg(buf, len, LOGBUF_T_I64, argn, &v, 0, 0, 0)) {
-                    char fmtstr[] = "%ll?";
-                    fmtstr[3] = *fmt;
-                    memcpy(&I, v, 8);
-                    sprintf(fmtbuf, fmtstr, (unsigned long long)I);
+                    format_int(fmtbuf, f, 8, v);
                    } else {
                     sprintf(fmtbuf, "<error: no numeric arg #%d>", argn);
+                    putstr(out_buf, fmtbuf);
+                    argn++;
+                    break;
                    }
-                   if(alt_form) { 
-                     if(!zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
-                     putstr(out_buf, "0x");
-                     if(zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
-                   } else {
-                     pad_int(putstr, out_buf, fmtbuf, field_width, zero_pad);
-                   }
-                   putstr(out_buf, fmtbuf);
+                   put_padded_int(putstr, out_buf, fmtbuf, field_width, zero_pad, alt_form);
                    argn++;
                    break;
            case 'e':
@@ -383,24 +419,16 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                     break;
                    }
 
-                   ff = NULL;
-                   switch(*++fmt) {
-                           case 'd': ff = "%lld"; /* TODO: use one function for array and non-array */
-                           case 'u': if(!ff) ff = "%llu";
+                   switch(f = *++fmt) {
+                           case 'd':
+                           case 'u':
                                      alt_form = 0;
-                           case 'x': if(!ff) ff = "%llx";
-                           case 'X': if(!ff) ff = "%llX";
+                           case 'x':
+                           case 'X':
                                   for(i = 0; i < l; i+=w) {
                                    if(i > 0) putstr(out_buf, " ");
-                                   sprintf(fmtbuf, ff, load_int(p+i, w));
-                                   if(alt_form) {
-                                    if(!zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
-                                    putstr(out_buf, "0x");
-                                    if(zero_pad) pad_int(putstr, out_buf, fmtbuf, field_width >= 2 ? field_width-2 : field_width, zero_pad);
-                                   } else {
-                                     pad_int(putstr, out_buf, fmtbuf, field_width, zero_pad);
-                                   }
-                                   putstr(out_buf, fmtbuf);
+                                   format_int(fmtbuf, f, w, p+i);
+                                   put_padded_int(putstr, out_buf, fmtbuf, field_width, zero_pad, alt_form);
                                   }
                                   break;
                            case 'a':
