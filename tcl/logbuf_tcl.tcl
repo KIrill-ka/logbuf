@@ -61,9 +61,11 @@ proc logbuf_get args {
   return $r
  }
 
- if {!([dict get $lc mask] & $grp)} {return ""}
+ if {$lc ne ""} {
+  if {!([dict get $lc mask] & $grp)} {return ""}
+  dict set r counter $lc
+ }
 
- dict set r counter $lc
  dict set r buf [binary format "cncn" $::logbuf_consts(MID) $mid $::logbuf_consts(GRP) $grp]
  return $r
 }
