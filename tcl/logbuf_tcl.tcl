@@ -66,7 +66,7 @@ proc logbuf_get args {
   dict set r counter $lc
  }
 
- dict set r buf [binary format "cncn" $::logbuf_consts(MID) $mid $::logbuf_consts(GRP) $grp]
+ dict set r buf [binary format "cncm" $::logbuf_consts(MID) $mid $::logbuf_consts(GRP) $grp]
  return $r
 }
 
