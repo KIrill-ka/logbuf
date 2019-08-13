@@ -5,6 +5,7 @@ set logbuf_consts(I64) 17
 set logbuf_consts(STR) 18
 set logbuf_consts(DATA) 19
 set logbuf_consts(FMT) 20
+set logbuf_consts(TIME) 21
 
 proc logbuf_int32 {var argn i} {
  upvar $var lb
@@ -36,6 +37,11 @@ proc logbuf_fmtstrn {var argn d} {
  dict append lb buf [binary format "cca*c" $::logbuf_consts(FMT) $argn $d 0]
 }
 
+proc logbuf_time {var argn t} {
+ upvar $var lb
+ dict append lb buf [binary format "ccm" $::logbuf_consts(TIME) $argn $t]
+}
+
 proc logbuf_get args {
  set l [llength $args]
 
@@ -55,9 +61,11 @@ proc logbuf_get args {
    error "Wrong # args: should be \"logbuf_get ?lc? ?grp? mid\""
  }
 
+ set time [expr {[clock microseconds] * 1000}]
  if {$grp eq ""} {
   if {$lc ne ""} {dict set r counter $lc}
   dict set r buf [binary format "cn" $::logbuf_consts(MID) $mid]
+  logbuf_time r 0 $time
   return $r
  }
 
@@ -67,6 +75,7 @@ proc logbuf_get args {
  }
 
  dict set r buf [binary format "cncm" $::logbuf_consts(MID) $mid $::logbuf_consts(GRP) $grp]
+ logbuf_time r 0 $time
  return $r
 }
 
