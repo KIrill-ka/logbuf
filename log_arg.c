@@ -11,19 +11,36 @@
 #include "logdest.h"
 #include "logbuf.h"
 
+static uint32_t 
+strlen_safe(const uint8_t *s, uint32_t maxlen) /* same as GNU strnlen */
+{
+ uint32_t i;
+ for(i = 0; i < maxlen; i++)
+  if(*s++ == '\0') break;
+ return i;
+}
+
 int 
 logdest_get_arg(const uint8_t *buf, uint32_t buflen, 
-				uint8_t type, uint8_t argn, const void** ptr, uint32_t *len, uint8_t *type_out, uint8_t *arg_out) 
+				uint8_t type, uint32_t argn, const void** ptr, uint32_t *len,
+                uint8_t *type_out, uint32_t *arg_out) 
 {
  uint32_t dlen;
  uint8_t t;
- uint8_t n;
+ uint32_t n;
  const uint8_t *bufend = buf + buflen;
 
  while(buf+1 < bufend) { /* 2 is the minimum length for tag+value */
   t = *buf++;
-  if(t < 16) n = 255;
-  else n = *buf++;
+  if(t < 16) n = 0xFfffFfff;
+  else {
+   n = *buf++;
+   if(n == 255) {
+    if(bufend - buf < 4) return 0; /* no space for an extended argnum - corrupted buf */
+    n = logbuf_get32(buf);
+    buf += 4;
+   }
+  }
   
   switch(t) {
 		   case LOGBUF_T_MID:
@@ -33,7 +50,7 @@ logdest_get_arg(const uint8_t *buf, uint32_t buflen,
 		   case LOGBUF_T_I64:
 		   case LOGBUF_T_TIME: dlen=8; break;
 		   case LOGBUF_T_STR:
-		   case LOGBUF_T_FMT: dlen=strlen((const char*)buf)+1; break;
+		   case LOGBUF_T_FMT: dlen=strlen_safe(buf, bufend-buf)+1; break;
 		   case LOGBUF_T_DATA: 
                               if(bufend - buf < 4) return 0; /* no space for length - corrupted buf */
                               dlen = logbuf_get32(buf);

@@ -395,7 +395,7 @@ logcounter_connect(logcounter_t *lc, logdest_t *h)
 }
 
 static void
-logbuf_grow(logbuf_t *b, uint32_t ammt)
+log_buf_grow(logbuf_t *b, uint32_t ammt)
 {
  if(!b->lb_xbuf) {
   uint32_t buf_used = sizeof(b->lb_buf) - b->lb_left;
@@ -432,7 +432,7 @@ static void
 log_buf_write(logbuf_t *b, const uint8_t *p, uint32_t n)
 {
  if(b->lb_left < n) {
-  logbuf_grow(b, n);
+  log_buf_grow(b, n);
   if(!b->lb_ok) return;
  }
  memcpy(b->lb_pos, p, n);
@@ -440,36 +440,51 @@ log_buf_write(logbuf_t *b, const uint8_t *p, uint32_t n)
  b->lb_left -= n;
 }
 
+static void
+log_buf_put_arg(logbuf_t *b, uint32_t argn)
+{
+ uint8_t a;
+
+ if(argn < 255) {
+  a = argn;
+  log_buf_write(b, &a, 1);
+ } else {
+  a = 255;
+  log_buf_write(b, &a, 1);
+  log_buf_write(b, (const uint8_t*)&argn, 4);
+ }
+}
+
 void 
-logbuf_int32(logbuf_t *c, uint8_t argn, uint32_t i)
+logbuf_int32(logbuf_t *c, uint32_t argn, uint32_t i)
 {
  uint8_t code = LOGBUF_T_I32;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)&i, 4);
 }
 
 void 
-logbuf_int64(logbuf_t *c, uint8_t argn, uint64_t i)
+logbuf_int64(logbuf_t *c, uint32_t argn, uint64_t i)
 {
  uint8_t code = LOGBUF_T_I64;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)&i, 8);
 }
 
 void 
-logbuf_ptr(logbuf_t *c, uint8_t argn, void *i)
+logbuf_ptr(logbuf_t *c, uint32_t argn, void *i)
 {
 #if defined(ILP32)
  uint8_t code = LOGBUF_T_I32;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)&i, 4);
 #elif defined(LLP64) || defined(LP64)
  uint8_t code = LOGBUF_T_I64;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)&i, 8);
 #else
 #error unknown data model
@@ -477,29 +492,29 @@ logbuf_ptr(logbuf_t *c, uint8_t argn, void *i)
 }
 
 void 
-logbuf_time(logbuf_t *c, uint8_t argn, uint64_t t)
+logbuf_time(logbuf_t *c, uint32_t argn, uint64_t t)
 {
  uint8_t code = LOGBUF_T_TIME;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)&t, 8);
 }
 
 void 
-logbuf_string(logbuf_t *c, uint8_t argn, const char *s)
+logbuf_string(logbuf_t *c, uint32_t argn, const char *s)
 {
  uint8_t code = LOGBUF_T_STR;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)s, strlen(s)+1);
 }
 
 void 
-logbuf_fmtstrn(logbuf_t *c, uint8_t argn, const char *s)
+logbuf_fmtstrn(logbuf_t *c, uint32_t argn, const char *s)
 {
  uint8_t code = LOGBUF_T_FMT;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)s, strlen(s)+1);
 }
 
@@ -514,17 +529,17 @@ logbuf_fmtstr(logbuf_t *c, const char *s)
 }
 
 void 
-logbuf_data(logbuf_t *c, uint8_t argn, const uint8_t *d, uint32_t l)
+logbuf_data(logbuf_t *c, uint32_t argn, const uint8_t *d, uint32_t l)
 {
  uint8_t code = LOGBUF_T_DATA;
  log_buf_write(c, &code, 1);
- log_buf_write(c, &argn, 1);
+ log_buf_put_arg(c, argn);
  log_buf_write(c, (uint8_t*)&l, 4);
  log_buf_write(c, d, l);
 }
 
 void 
-logbuf_fmtauto(logbuf_t *b, uint8_t *argn, const char *fmt, ...)
+logbuf_fmtauto(logbuf_t *b, uint32_t *argn, const char *fmt, ...)
 {
  va_list ap;
  va_start(ap, fmt);
@@ -533,10 +548,10 @@ logbuf_fmtauto(logbuf_t *b, uint8_t *argn, const char *fmt, ...)
 }
 
 void 
-logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap)
+logbuf_fmtauto_va(logbuf_t *b, uint32_t *argn, const char *fmt, va_list ap)
 {
  char c;
- uint8_t n;
+ uint32_t n;
  int long_int;
  int array;
 
@@ -618,7 +633,7 @@ logbuf_simple_message(logcounter_t *lc, uint64_t ev_type, uint32_t msg_id, const
 {
  logbuf_t *b = logbuf_get(lc, ev_type, msg_id);
  va_list ap;
- uint8_t n = 0;
+ uint32_t n = 0;
  if(b != NULL) {
   va_start(ap, fmt);
   logbuf_fmtauto_va(b, &n, fmt, ap);
@@ -632,7 +647,7 @@ logbuf_debug(logcounter_t *lc, const char *fmt, ...)
 {
  logbuf_t *b = logbuf_get(lc, LOGBUF_EV_DEBUG, LOGBUF_ID_DEBUG);
  va_list ap;
- uint8_t n = 0;
+ uint32_t n = 0;
  if(b != NULL) {
   va_start(ap, fmt);
   logbuf_fmtauto_va(b, &n, fmt, ap);

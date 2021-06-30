@@ -7,24 +7,37 @@ set logbuf_consts(DATA) 19
 set logbuf_consts(FMT) 20
 set logbuf_consts(TIME) 21
 
+proc _logbuf_put_type_argn {var type argn} {
+ upvar $var lb
+ if {$argn < 255} {
+  dict append lb buf [binary format "cc" $type $argn]
+ } else {
+  dict append lb buf [binary format "ccn" $type 255 $argn]
+ }
+}
+
 proc logbuf_int32 {var argn i} {
  upvar $var lb
- dict append lb buf [binary format "ccn" $::logbuf_consts(I32) $argn $i]
+ _logbuf_put_type_argn lb $::logbuf_consts(I32) $argn
+ dict append lb buf [binary format "n" $i]
 }
 
 proc logbuf_int64 {var argn i} {
  upvar $var lb
- dict append lb buf [binary format "ccm" $::logbuf_consts(I64) $argn $i]
+ _logbuf_put_type_argn lb $::logbuf_consts(I64) $argn
+ dict append lb buf [binary format "m" $i]
 }
 
 proc logbuf_data {var argn d} {
  upvar $var lb
- dict append lb buf [binary format "ccna*" $::logbuf_consts(DATA) $argn [string length $d] $d]
+ _logbuf_put_type_argn lb $::logbuf_consts(DATA) $argn
+ dict append lb buf [binary format "na*" [string length $d] $d]
 }
 
 proc logbuf_string {var argn d} {
  upvar $var lb
- dict append lb buf [binary format "cca*c" $::logbuf_consts(STR) $argn $d 0]
+ _logbuf_put_type_argn lb $::logbuf_consts(STR) $argn
+ dict append lb buf [binary format "a*c" $d 0]
 }
 
 proc logbuf_fmt {var d} {
@@ -34,12 +47,14 @@ proc logbuf_fmt {var d} {
 
 proc logbuf_fmtstrn {var argn d} {
  upvar $var lb
- dict append lb buf [binary format "cca*c" $::logbuf_consts(FMT) $argn $d 0]
+ _logbuf_put_type_argn lb $::logbuf_consts(FMT) $argn
+ dict append lb buf [binary format "a*c" $d 0]
 }
 
 proc logbuf_time {var argn t} {
  upvar $var lb
- dict append lb buf [binary format "ccm" $::logbuf_consts(TIME) $argn $t]
+ _logbuf_put_type_argn lb $::logbuf_consts(TIME) $argn
+ dict append lb buf [binary format "m" $t]
 }
 
 proc logbuf_get args {
