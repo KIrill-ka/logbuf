@@ -2,7 +2,9 @@
 CFLAGS= -g -I../include -L../build_dir -Wall -Wl,--rpath=../build_dir
 
 #tests=build_dir/logtest build_dir/logdest-res build_dir/logtest-fmt build_dir/logtest-pref
-tests=build_dir/logtest build_dir/logtest-fmt build_dir/logtest-pref build_dir/logtest-nested-fmt
+tests=build_dir/logtest build_dir/logtest-fmt build_dir/logtest-pref \
+      build_dir/logtest-nested-fmt build_dir/logtest-argn32 \
+      build_dir/logtest-res
 
 all: $(tests)
 build_dir/logtest: logtest.c
@@ -18,6 +20,14 @@ build_dir/logtest-nested-fmt: logtest-nested-fmt.c
 	gcc $(CFLAGS) $< -o $@ -llogbuf -llogdest
 
 build_dir/logtest-fmt: logtest-fmt.c
+	@mkdir -p build_dir
+	gcc $(CFLAGS) $< -o $@ -llogstdio -llogbuf -llogdest
+
+build_dir/logtest-argn32: logtest-argn32.c
+	@mkdir -p build_dir
+	gcc $(CFLAGS) $< -o $@ -llogstdio -llogbuf -llogdest
+
+build_dir/logtest-res: logtest-res.cpp
 	@mkdir -p build_dir
 	gcc $(CFLAGS) $< -o $@ -llogstdio -llogbuf -llogdest
 

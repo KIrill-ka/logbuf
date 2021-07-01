@@ -29,10 +29,10 @@ fmt_char2type(char c)
 }
 
 static int
-fmt_skip(const char **fmt, int *a)
+fmt_skip(const char **fmt, uint32_t *a)
 {
  const char *f = *fmt;
- int an = *a;
+ uint32_t an = *a;
  unsigned d = 1;
  int rc = 1;
  while(*f && d) {
@@ -173,7 +173,7 @@ void logdest_format_message(struct _logres *res, const char *fmtstr, const uint8
   logdest_get_arg(buf, len, LOGBUF_T_MID, 0, &mid_ptr, NULL, NULL, NULL);
   if(mid_ptr) mid = logbuf_get32(mid_ptr);
   else mid = 0;
-  sprintf(fmtbuf, "<error: no format string for mid %x>", mid);
+  sprintf(fmtbuf, "<MID 0x%x: no format string>", mid);
   putstrstr(&b, fmtbuf);
  } else {
   logdest_format_message_stream(putstrstr, &b, res, fmtstr, buf, len);
@@ -250,7 +250,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
  uint32_t field_width;
  int zero_pad;
  int alt_form;
- int argn = 1;
+ uint32_t argn = 1;
  char f;
 
  if(fmt == NULL)
@@ -263,7 +263,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
   logdest_get_arg(buf, len, LOGBUF_T_MID, 0, &mid_ptr, NULL, NULL, NULL);
   if(mid_ptr) mid = logbuf_get32(mid_ptr);
   else mid = 0;
-  sprintf(fmtbuf, "<error: no format string for mid %x>", mid);
+  sprintf(fmtbuf, "<MID 0x%x: no format string>", mid);
   putstr(out_buf, fmtbuf);
   return;
  }
@@ -323,7 +323,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
            case '8':
            case '9': field_width = field_width*10 + *fmt-'0';
                      if(field_width > 4096) {
-                      sprintf(fmtbuf,"<error: field width > 4096>");
+                      sprintf(fmtbuf,"<argn #%u: field width > 4096>", argn);
                       putstr(out_buf, fmtbuf);
                       field_width = 0;
                       break;
@@ -344,14 +344,15 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
            case 'S':
                    if(logdest_get_arg(buf, len, LOGBUF_T_FMT, argn++, (const void**)&p, 0, 0, 0)) {
                     if(sp >= FMT_STACK_SIZE) {
-                     putstr(out_buf, "<error: fmt stack overflow>");
+                     sprintf(fmtbuf, "<arg #%u: fmt stack overflow>", argn-1);
+                     putstr(out_buf, fmtbuf);
                      break;
                     }
                     stack[sp++] = fmt+1;
                     fmt = p;
                     continue;
                    }
-                   sprintf(fmtbuf, "<error: no format string arg #%d>", argn-1);
+                   sprintf(fmtbuf, "<arg #%u: no format string>", argn-1);
                    putstr(out_buf, fmtbuf);
                    break;
 
@@ -359,7 +360,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    if(logdest_get_arg(buf, len, LOGBUF_T_STR, argn++, (const void**)&p, 0, 0, 0)) {
                     putstr(out_buf, p);
                    } else {
-                    sprintf(fmtbuf,"<error: no string arg #%d>", argn-1);
+                    sprintf(fmtbuf,"<arg #%u: no string>", argn-1);
                     putstr(out_buf, fmtbuf);
                    }
                    break;
@@ -372,7 +373,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    } else if(logdest_get_arg(buf, len, LOGBUF_T_I64, argn, &v, 0, 0, 0)) {
                     format_int(fmtbuf, f, 8, v);
                    } else {
-                    sprintf(fmtbuf, "<error: no numeric arg #%d>", argn);
+                    sprintf(fmtbuf, "<arg #%u: no integer>", argn);
                     putstr(out_buf, fmtbuf);
                     argn++;
                     break;
@@ -382,12 +383,12 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    break;
            case 'e':
                    if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (const void**)&p1, &l, 0, 0)) {
-                    sprintf(fmtbuf, "<error: no data arg #%d>", argn-1);
+                    sprintf(fmtbuf, "<arg #%u: no data>", argn-1);
                     putstr(out_buf, fmtbuf);
                     break;
                    }
                    if(l != 6) {
-                    sprintf(fmtbuf, "<error: len is not 6 #%d>", argn-1);
+                    sprintf(fmtbuf, "<arg #%u: len is not 6>", argn-1);
                     putstr(out_buf, fmtbuf);
                     break;
                    }
@@ -400,7 +401,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                     i = logbuf_get32(v);
                     sprintf(fmtbuf, "%d.%d.%d.%d", i>>24, (i>>16)&0xff, (i>>8)&0xff, i&0xff);
                    } else {
-                    sprintf(fmtbuf, "<error: no numeric arg #%d>", argn-1);
+                    sprintf(fmtbuf, "<arg #%u: no integer>", argn-1);
                    }
                    putstr(out_buf, fmtbuf);
                    break;
@@ -408,13 +409,13 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                    w = fmt[1] >= '1' && fmt[1] <= '8' ? *++fmt - '0' : 4;
 
                    if(!logdest_get_arg(buf, len, LOGBUF_T_DATA, argn++, (const void**)&p, &l, 0, 0)) {
-                    sprintf(fmtbuf, "<error: no data arg #%d>", argn-1);
+                    sprintf(fmtbuf, "<arg #%u: no data>", argn-1);
                     putstr(out_buf, fmtbuf);
                     break;
                    }
 
                    if(l%w) {
-                    sprintf(fmtbuf, "<arg #%d: length is not multiple of %d>", argn-1, w);
+                    sprintf(fmtbuf, "<arg #%u: length is not a multiple of %d>", argn-1, w);
                     putstr(out_buf, fmtbuf);
                     break;
                    }
@@ -433,7 +434,7 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                                   break;
                            case 'a':
                                   if(w != 4) {
-                                   sprintf(fmtbuf, "<arg #%d: ip list should have width specifier 4, not %d>", argn-1, w);
+                                   sprintf(fmtbuf, "<arg #%u: ip list should have width specifier 4, not %d>", argn-1, w);
                                    putstr(out_buf, fmtbuf);
                                    break;
                                   }
@@ -446,14 +447,14 @@ logdest_format_message_stream(void (*putstr)(void *out_buf, const char *str), vo
                                   break;
 
                            default:
-                                  sprintf(fmtbuf, "<error: unknown format char-'%c'>", *fmt);
+                                  sprintf(fmtbuf, "<arg #%u: unknown format char-'%c'>", argn, *fmt);
                                   putstr(out_buf, fmtbuf);
                                   if(*fmt == 0) continue;
                    }
                    break;
            case 'n': argn++; break;
            default:
-                   sprintf(fmtbuf, "<error: unknown format char-'%c'>", *fmt);
+                   sprintf(fmtbuf, "<arg #%u: unknown format char-'%c'>", argn, *fmt);
                    putstr(out_buf, fmtbuf);
                    if(*fmt == 0) continue; /* skip fmt++ */
 

@@ -47,17 +47,17 @@ extern void logbuf_assign_counter(logbuf_t *lb, struct _logcounter *lc);
 extern logbuf_t* logbuf_create(uint64_t ev_type, uint32_t msg_id, int add_timestamp);
 extern logbuf_t* logbuf_regenerate(uint8_t *src_buf, uint32_t len);
 
-extern void logbuf_int32(logbuf_t *b, uint8_t argn, uint32_t i); 
-extern void logbuf_int64(logbuf_t *b, uint8_t argn, uint64_t i); 
-extern void logbuf_ptr(logbuf_t *b, uint8_t argn, void *i); 
-extern void logbuf_string(logbuf_t *b, uint8_t argn, const char *str);
-extern void logbuf_data(logbuf_t *b, uint8_t argn, const uint8_t *d, uint32_t l);
+extern void logbuf_int32(logbuf_t *b, uint32_t argn, uint32_t i); 
+extern void logbuf_int64(logbuf_t *b, uint32_t argn, uint64_t i); 
+extern void logbuf_ptr(logbuf_t *b, uint32_t argn, void *i); 
+extern void logbuf_string(logbuf_t *b, uint32_t argn, const char *str);
+extern void logbuf_data(logbuf_t *b, uint32_t argn, const uint8_t *d, uint32_t l);
 extern void logbuf_fmtstr(logbuf_t *b, const char *fmt);
-extern void logbuf_fmtstrn(logbuf_t *b, uint8_t argn, const char *fmt);
-extern void logbuf_time(logbuf_t *b, uint8_t argn, uint64_t t);
-extern void logbuf_fmtauto(logbuf_t *b, uint8_t *argn, const char *fmt, ...);
+extern void logbuf_fmtstrn(logbuf_t *b, uint32_t argn, const char *fmt);
+extern void logbuf_time(logbuf_t *b, uint32_t argn, uint64_t t);
+extern void logbuf_fmtauto(logbuf_t *b, uint32_t *argn, const char *fmt, ...);
 #ifdef LOGBUF_VA /* logbuf_fmtauto_va requres stdarg.h header */
-extern void logbuf_fmtauto_va(logbuf_t *b, uint8_t *argn, const char *fmt, va_list ap);
+extern void logbuf_fmtauto_va(logbuf_t *b, uint32_t *argn, const char *fmt, va_list ap);
 #endif
 
 extern void logbuf_debug(struct _logcounter *lc, const char *fmt, ...);

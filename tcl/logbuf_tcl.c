@@ -115,7 +115,7 @@ tcl_logdest_get_arg_common(ClientData clientData, Tcl_Interp *interp, int objc, 
  const void *ptr;
  uint32_t len;
  uint8_t type;
- uint8_t arg;
+ uint32_t arg;
  int use_str_type;
 
  if (objc < 3) {

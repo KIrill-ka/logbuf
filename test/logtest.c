@@ -28,9 +28,10 @@ int main()
  logcounter_connect(lc, &simple_dest);
  logcounter_set_filter(lc, &simple_dest, 1);
 
+ printf("test#00.1 Hello World 1\n");
  lb = logbuf_get(lc, 1, 1);
  if(lb != NULL) {
-  logbuf_fmtstr(lb, "Hello World %d");
+  logbuf_fmtstr(lb, "test#00.2 Hello World %d");
   logbuf_int32(lb, 1, 1);
   logbuf_send(lb);
  }
