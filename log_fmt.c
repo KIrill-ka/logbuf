@@ -59,7 +59,7 @@ load_uint(const void *d, int w)
  uint64_t n;
 
  for(i = 0, n = 0; i < w; i++)
-#ifdef LITTLE_ENDIAN
+#ifdef LOGBUF_LITTLE_ENDIAN
   n = (n<<8) + *((uint8_t*)d+(w-i-1));
 #else
   n = (n<<8) + *((uint8_t*)d+i);
