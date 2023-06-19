@@ -40,6 +40,12 @@ proc logbuf_string {var argn d} {
  dict append lb buf [binary format "a*c" $d 0]
 }
 
+proc logbuf_u8string {var argn d} {
+ upvar $var lb
+ _logbuf_put_type_argn lb $::logbuf_consts(STR) $argn
+ dict append lb buf [binary format "a*c" [encoding convertto utf-8 $d] 0]
+}
+
 proc logbuf_fmt {var d} {
  upvar $var lb
  dict append lb buf [binary format "cca*c" $::logbuf_consts(FMT) 0 $d 0]
